@@ -2,7 +2,7 @@
 #define uchar unsigned char
 #define LED 5
 uchar temp;             //define temperature parameter
-uchar humi;               //define humidity parameter
+uchar humi;             //define humidity parameter
 int tol;                //define jiaoxian 
 unsigned int loopCnt;   //loop counter
 int chr[40] = {0};      //define a array to store 40 bits
@@ -22,17 +22,16 @@ void loop() {
       Serial.write(inByte);
       delay(100);
   }
-      bgn:
+      bgn:                                  //define a label
       delay(200);
-      pinMode(LED, OUTPUT);
-      digitalWrite(LED, LOW);
+      pinMode(LED, OUTPUT);                 //output mode
+      digitalWrite(LED, LOW);               //output low level 20ms
       delay(20);
-      digitalWrite(LED, HIGH);
-      delayMicroseconds(40);
-      digitalWrite(LED, LOW);
-      pinMode(LED, INPUT);
-      loopCnt = 10000;
-      while(digitalRead(LED)!=HIGH)
+      digitalWrite(LED, HIGH);              //output high level 40us
+      delayMicroseconds(40);                
+      pinMode(LED, INPUT);                  //input mode
+      loopCnt = 10000;                      //DHT response signal counter
+      while(digitalRead(LED)!=HIGH)         //judge DHT low response signal
       {
         if(loopCnt-- == 0)
         {
@@ -41,7 +40,7 @@ void loop() {
         } 
       }
       loopCnt = 10000;
-      while(digitalRead(LED)!=LOW)
+      while(digitalRead(LED)!=LOW)          //judge DHT high response signal
       {
         if(loopCnt-- == 0)
         {
@@ -49,28 +48,24 @@ void loop() {
           goto bgn;  
         } 
       }
-      for(int i=0; i<40; i++)
+      for(int i=0; i<40; i++)               //receive 40 characters data
       {
-        while(digitalRead(LED)==LOW)
+        while(digitalRead(LED)==LOW)        //judge high level width
         {}
         times = micros();
         while(digitalRead(LED)==HIGH)
         {}
-        if(micros()- times > 50)
+        if(micros()- times > 50)            //high level = 70us denotes "1".
         {
           chr[i] = 1;
         }  
-        else
+        else                                //high level = 26-28us denotes "0"
         {
           chr[i] = 0;  
         }
-//        Serial.print(chr[i]);
       }
-//      Serial.print("\n");
       humi = chr[0]*128+chr[1]*64+chr[2]*32+chr[3]*16+chr[4]*8+chr[5]*4+chr[6]*2+chr[7];
       temp = chr[16]*128+chr[17]*64+chr[18]*32+chr[19]*16+chr[20]*8+chr[21]*4+chr[22]*2+chr[23];
-      Serial.print(temp);
-      Serial.print(' ');
-      Serial.print(humi);
-      Serial.print("\n");
+      Serial.write(temp);                   //return temperature data to python script
+      Serial.write(humi);                   //return humidity data to python script
 }
