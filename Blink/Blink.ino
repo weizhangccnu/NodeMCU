@@ -2,7 +2,8 @@
 #include <ESP8266WiFi.h>
 
 #define uchar unsigned char
-#define LED 5
+#define DATA  5
+#define LED   16
 uchar temp;             //define temperature parameter
 uchar humi;             //define humidity parameter
 int tol;                //define jiaoxian 
@@ -12,18 +13,20 @@ unsigned int times;     //define times parameter
 uchar inByte = 10;      //receive data from python script
 
 //====================================================================//
-const char* ssid = "cbm706";                        //your network SSID (name)
-const char* password = "phy12345";                  //you network password
+const char* ssid = "CHI NA";                        //your network SSID (name)
+const char* password = "hjk397124600HJK@qq.com";                  //you network password
 
-const char* host = "data.sparkfun.com";             //host ip address
+//const char* host = "www.hao123.com";             //host ip address
+const char* host = "192.168.0.100";             //host ip address
 const char* streamId   = "....................";
 const char* privateKey = "....................";
 
 int value = 0;
 //====================================================================//
 void setup() {
-  Serial.begin(9600);                   //Set Baud Rate
-  pinMode(LED, OUTPUT);                 // Initialize the LED_BUILTIN pin as an output
+  Serial.begin(9600);                   // Set Baud Rate
+  pinMode(DATA, OUTPUT);                 // Initialize the LED_BUILTIN pin as an output
+  pinMode(LED, OUTPUT);                    // Initial RXD0 pin
 
 //  Serial.println();                   //we start by connecting to a WiFi network
 //  Serial.println();     
@@ -49,8 +52,14 @@ void loop() {
   {             
       inByte = Serial.read();               //receive serial port data
       Serial.write(inByte);
-      delay(100);
+//      Serial.print(inByte);
+//      Serial.print('\n');
+//      digitalWrite(LED, LOW);
+//      delay(1);
+//      digitalWrite(LED, HIGH);
+//      delay(1);
   }
+
 //====================================================================//
 //WiFi connection section
 //====================================================================// 
@@ -59,67 +68,72 @@ void loop() {
   Serial.print("Connecting to ");
   Serial.println(host);
   WiFiClient client;                            //Use WiFiClient class to creat TCP connections
-  const int httpPort = 80;
+  const int httpPort = 8080;
   if(!client.connect(host, httpPort))
   {
     Serial.println("Connection failed");
     return;  
   }
-//  String url = "/input/";                       //Create a URI for the request
+  
+//  String url = "/input/";                       //Create a URL for the request
 //  url += streamId;
 //  url += "?private_key=";
 //  url += 
 //====================================================================//
 //DHT11 fetch data code section
 //====================================================================// 
-      bgn:                                  //define a label
-      delay(200);
-      pinMode(LED, OUTPUT);                 //output mode
-      digitalWrite(LED, LOW);               //output low level 20ms
-      delay(20);
-      digitalWrite(LED, HIGH);              //output high level 40us
-      delayMicroseconds(40);                
-      pinMode(LED, INPUT);                  //input mode
-      loopCnt = 10000;                      //DHT response signal counter
-      while(digitalRead(LED)!=HIGH)         //judge DHT low response signal
+    bgn:                                  //define a label
+    delay(200);
+    pinMode(DATA, OUTPUT);                 //output mode
+    digitalWrite(DATA, LOW);               //output low level 20ms
+    delay(20);
+    digitalWrite(DATA, HIGH);              //output high level 40us
+    delayMicroseconds(40);                
+    pinMode(DATA, INPUT);                  //input mode
+    loopCnt = 10000;                      //DHT response signal counter
+    while(digitalRead(DATA)!=HIGH)         //judge DHT low response signal
+    {
+      if(loopCnt-- == 0)
       {
-        if(loopCnt-- == 0)
-        {
-          Serial.println("HIGH");
-          goto bgn;  
-        } 
-      }
-      loopCnt = 10000;
-      while(digitalRead(LED)!=LOW)          //judge DHT high response signal
+        Serial.println("HIGH");
+        goto bgn;  
+      } 
+    }
+    loopCnt = 10000;
+    while(digitalRead(DATA)!=LOW)          //judge DHT high response signal
+    {
+      if(loopCnt-- == 0)
       {
-        if(loopCnt-- == 0)
-        {
-          Serial.println("LOW");
-          goto bgn;  
-        } 
-      }
-      for(int i=0; i<40; i++)               //receive 40 characters data
+        Serial.println("LOW");
+        goto bgn;  
+      } 
+    }
+    for(int i=0; i<40; i++)               //receive 40 characters data
+    {
+      while(digitalRead(DATA)==LOW)        //judge high level width
+      {}
+      times = micros();
+      while(digitalRead(DATA)==HIGH)
+      {}
+      if(micros()- times > 50)            //high level = 70us denotes "1".
       {
-        while(digitalRead(LED)==LOW)        //judge high level width
-        {}
-        times = micros();
-        while(digitalRead(LED)==HIGH)
-        {}
-        if(micros()- times > 50)            //high level = 70us denotes "1".
-        {
-          chr[i] = 1;
-        }  
-        else                                //high level = 26-28us denotes "0"
-        {
-          chr[i] = 0;  
-        }
+        chr[i] = 1;
+      }  
+      else                                //high level = 26-28us denotes "0"
+      {
+        chr[i] = 0;  
       }
-      humi = chr[0]*128+chr[1]*64+chr[2]*32+chr[3]*16+chr[4]*8+chr[5]*4+chr[6]*2+chr[7];
-      temp = chr[16]*128+chr[17]*64+chr[18]*32+chr[19]*16+chr[20]*8+chr[21]*4+chr[22]*2+chr[23];
-      Serial.print("Temperature:");
-      Serial.print(temp);                   //return temperature data to python script
-      Serial.print(' ');
-      Serial.print("Humidity:");
-      Serial.print(humi);                   //return humidity data to python script
-      Serial.print('\n');
+    }
+    humi = chr[0]*128+chr[1]*64+chr[2]*32+chr[3]*16+chr[4]*8+chr[5]*4+chr[6]*2+chr[7];
+    temp = chr[16]*128+chr[17]*64+chr[18]*32+chr[19]*16+chr[20]*8+chr[21]*4+chr[22]*2+chr[23];
+    Serial.print("Temperature:");
+    Serial.print(temp);                   //return temperature data to python script
+    Serial.print(' ');
+    Serial.print("Humidity:");
+    Serial.print(humi);                   //return humidity data to python script
+    Serial.print('\n');
+    String chr = String(temp)+String('|')+String(humi); 
+    client.print(chr);
+//    client.print();
+//      uart.alt(1);
 }
